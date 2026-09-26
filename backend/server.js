@@ -3,9 +3,30 @@ import cors from "cors";
 import { db } from "./db.js";
 
 const app = express();
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+  "http://localhost:3000",
+  "http://127.0.0.1:3000"
+];
 
-app.use(cors());
-app.use(express.json());
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(null, false);
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"]
+  })
+);
+app.options(/.*/, cors());
+app.use(express.json({ limit: "1mb" }));
 
 app.get("/", (req, res) => {
   res.json({
@@ -50,6 +71,10 @@ app.post("/api/users", async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
+    if (!name || !email || !password) {
+      return res.status(400).json({ error: "Name, email and password are required" });
+    }
+
     const user = await db.orm.public.User.create({
       name,
       email,
@@ -57,11 +82,57 @@ app.post("/api/users", async (req, res) => {
       role: "user"
     });
 
-    res.status(201).json(user);
+    res.status(201).json({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role
+    });
   } catch (error) {
     console.error("CREATE USER ERROR:", error);
+
+    if (error?.message?.includes("duplicate") || error?.message?.includes("unique")) {
+      return res.status(409).json({ error: "User with this email already exists" });
+    }
+
     res.status(500).json({
       error: "Failed to create user",
+      details: error.message
+    });
+  }
+});
+
+app.post("/api/auth/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ error: "Email and password are required" });
+    }
+
+    const user = await db.orm.public.User.findFirst({
+      where: { email }
+    });
+
+    if (!user) {
+      return res.status(401).json({ error: "Invalid email or password" });
+    }
+
+    const validPassword = user.password === password;
+    if (!validPassword) {
+      return res.status(401).json({ error: "Invalid email or password" });
+    }
+
+    res.json({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role
+    });
+  } catch (error) {
+    console.error("LOGIN ERROR:", error);
+    res.status(500).json({
+      error: "Failed to log in",
       details: error.message
     });
   }
