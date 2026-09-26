@@ -1,0 +1,38 @@
+// use prisma-8
+
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  password  String
+  role      String   @default("user")
+  createdAt DateTime @default(now())
+
+  alerts    Alert[]
+}
+
+model Stock {
+  id          Int      @id @default(autoincrement())
+  symbol      String   @unique
+  companyName String
+  sector      String?
+  price       Float?
+  createdAt   DateTime @default(now())
+  updatedAt temporal.updatedAt()
+
+  alerts      Alert[]
+}
+
+model Alert {
+  id        Int      @id @default(autoincrement())
+  message   String
+  targetPrice Float?
+  triggered Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  userId  Int
+  stockId Int
+
+  user  User  @relation(fields: [userId], references: [id])
+  stock Stock @relation(fields: [stockId], references: [id])
+}

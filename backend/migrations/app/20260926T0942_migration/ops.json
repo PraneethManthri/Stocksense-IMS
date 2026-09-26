@@ -1,0 +1,382 @@
+[
+  {
+    "id": "schema.public",
+    "label": "Create schema \"public\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres"
+    },
+    "precheck": [],
+    "execute": [
+      {
+        "description": "Create schema \"public\"",
+        "sql": "CREATE SCHEMA IF NOT EXISTS \"public\"",
+        "params": []
+      }
+    ],
+    "postcheck": []
+  },
+  {
+    "id": "table.Alert",
+    "label": "Create table \"Alert\"",
+    "summary": "Creates table \"Alert\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "Alert"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"Alert\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Alert\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"Alert\"",
+        "sql": "CREATE TABLE \"public\".\"Alert\" (\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"id\" SERIAL NOT NULL,\n  \"message\" text NOT NULL,\n  \"stockId\" int4 NOT NULL,\n  \"targetPrice\" float8,\n  \"triggered\" bool DEFAULT false NOT NULL,\n  \"userId\" int4 NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"Alert\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Alert\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.Stock",
+    "label": "Create table \"Stock\"",
+    "summary": "Creates table \"Stock\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "Stock"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"Stock\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Stock\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"Stock\"",
+        "sql": "CREATE TABLE \"public\".\"Stock\" (\n  \"companyName\" text NOT NULL,\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"id\" SERIAL NOT NULL,\n  \"price\" float8,\n  \"sector\" text,\n  \"symbol\" text NOT NULL,\n  \"updatedAt\" timestamptz NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"Stock\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Stock\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.User",
+    "label": "Create table \"User\"",
+    "summary": "Creates table \"User\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "User"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"User\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"User\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"User\"",
+        "sql": "CREATE TABLE \"public\".\"User\" (\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"email\" text NOT NULL,\n  \"id\" SERIAL NOT NULL,\n  \"name\" text NOT NULL,\n  \"password\" text NOT NULL,\n  \"role\" text DEFAULT 'user' NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"User\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"User\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.Stock.Stock_symbol_key",
+    "label": "Add unique constraint on \"Stock\" (symbol)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "Stock_symbol_key",
+        "table": "Stock"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"Stock_symbol_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Stock_symbol_key",
+          "public",
+          "\"public\".\"Stock\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"Stock_symbol_key\"",
+        "sql": "ALTER TABLE \"public\".\"Stock\" ADD CONSTRAINT \"Stock_symbol_key\" UNIQUE (\"symbol\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"Stock_symbol_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Stock_symbol_key",
+          "public",
+          "\"public\".\"Stock\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.User.User_email_key",
+    "label": "Add unique constraint on \"User\" (email)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "User_email_key",
+        "table": "User"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"User_email_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "User_email_key",
+          "public",
+          "\"public\".\"User\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"User_email_key\"",
+        "sql": "ALTER TABLE \"public\".\"User\" ADD CONSTRAINT \"User_email_key\" UNIQUE (\"email\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"User_email_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "User_email_key",
+          "public",
+          "\"public\".\"User\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.Alert.Alert_stockId_idx_601a9afb",
+    "label": "Create index \"Alert_stockId_idx_601a9afb\" on \"Alert\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "Alert_stockId_idx_601a9afb",
+        "table": "Alert"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"Alert_stockId_idx_601a9afb\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Alert_stockId_idx_601a9afb\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"Alert_stockId_idx_601a9afb\"",
+        "sql": "CREATE INDEX \"Alert_stockId_idx_601a9afb\" ON \"public\".\"Alert\" (\"stockId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"Alert_stockId_idx_601a9afb\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Alert_stockId_idx_601a9afb\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.Alert.Alert_userId_idx_a489d58a",
+    "label": "Create index \"Alert_userId_idx_a489d58a\" on \"Alert\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "Alert_userId_idx_a489d58a",
+        "table": "Alert"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"Alert_userId_idx_a489d58a\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Alert_userId_idx_a489d58a\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"Alert_userId_idx_a489d58a\"",
+        "sql": "CREATE INDEX \"Alert_userId_idx_a489d58a\" ON \"public\".\"Alert\" (\"userId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"Alert_userId_idx_a489d58a\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Alert_userId_idx_a489d58a\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.Alert.Alert_userId_fkey",
+    "label": "Add foreign key \"Alert_userId_fkey\" on \"Alert\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "Alert_userId_fkey",
+        "table": "Alert"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"Alert_userId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Alert_userId_fkey",
+          "public",
+          "\"public\".\"Alert\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"Alert_userId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"Alert\"\nADD CONSTRAINT \"Alert_userId_fkey\"\nFOREIGN KEY (\"userId\")\nREFERENCES \"public\".\"User\" (\"id\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"Alert_userId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Alert_userId_fkey",
+          "public",
+          "\"public\".\"Alert\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.Alert.Alert_stockId_fkey",
+    "label": "Add foreign key \"Alert_stockId_fkey\" on \"Alert\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "Alert_stockId_fkey",
+        "table": "Alert"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"Alert_stockId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Alert_stockId_fkey",
+          "public",
+          "\"public\".\"Alert\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"Alert_stockId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"Alert\"\nADD CONSTRAINT \"Alert_stockId_fkey\"\nFOREIGN KEY (\"stockId\")\nREFERENCES \"public\".\"Stock\" (\"id\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"Alert_stockId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Alert_stockId_fkey",
+          "public",
+          "\"public\".\"Alert\""
+        ]
+      }
+    ]
+  }
+]
